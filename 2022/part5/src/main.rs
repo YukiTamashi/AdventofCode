@@ -25,9 +25,10 @@ impl From<&str> for Move{
 fn main() {
     let moves = fs::read_to_string("day5.in").unwrap();
     let stacks = fs::read_to_string("stacks.in").unwrap();
-    let mut stacks = build_stack(&stacks);
-    solve_moves(&mut stacks, &moves);
-    println!("{:?}", stacks);
+    let stacks = build_stack(&stacks);
+    let moves = solve_moves(&moves);
+    println!("Part 1: {}", part1(&stacks, &moves));
+    println!("Part 2: {}", part2(&stacks, &moves))
 }
 
 
@@ -50,15 +51,15 @@ fn build_stack(s: &str) -> Vec<Vec<char>>{
     result
 }
 
-fn solve_moves(stacks: &mut [Vec<char>], moves: &str){
+fn solve_moves(moves: &str)-> Vec<Move>{
     let mut moves_vec = vec!();
     for line in moves.lines(){
         moves_vec.push(Move::from(line));
     }
-    transfer(stacks, moves_vec)
+    moves_vec
 }
 
-fn transfer(stacks: &mut [Vec<char>], moves: Vec<Move>) {
+fn transfer(mut stacks: Vec<Vec<char>>, moves: &Vec<Move>) -> Vec<Vec<char>>{
     for m in moves{
         for _ in 0..m.amount{
             let c = stacks[m.from].pop();
@@ -67,4 +68,39 @@ fn transfer(stacks: &mut [Vec<char>], moves: Vec<Move>) {
             }
         }
     }
+    stacks
+}
+
+fn transfer_retain(mut stacks: Vec<Vec<char>>, moves: &Vec<Move>) -> Vec<Vec<char>>{
+    let mut temp = vec!();
+    for m in moves{
+        for _ in 0..m.amount{
+            let c = stacks[m.from].pop();
+            if let Some(c) = c{
+                temp.push(c);
+            }
+        }
+        while !temp.is_empty(){
+            stacks[m.to].push(temp.pop().unwrap());
+        }
+    }
+    stacks
+}
+
+fn part1(stacks: & [Vec<char>], moves: &Vec<Move>) -> String{
+    let stacks = transfer(stacks.to_owned(), moves);
+    let mut result = "".into();
+    for s in stacks{
+        result = format!("{}{}", result, s.last().unwrap());
+    }
+    result
+}
+
+fn part2(stacks: & [Vec<char>], moves: &Vec<Move>) -> String{
+    let stacks = transfer_retain(stacks.to_owned(), moves);
+    let mut result = "".into();
+    for s in stacks{
+        result = format!("{}{}", result, s.last().unwrap());
+    }
+    result
 }
