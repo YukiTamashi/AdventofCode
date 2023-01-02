@@ -1,20 +1,8 @@
 [package]
-name = "aoc2022"
+name = "part7"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-
-[workspace]
-
-members = [
-    "part1",
-    "part2",
-    "part3",
-    "part4",
-    "part5",
-    "part6",
-    "part7",
-]
