@@ -1,9 +1,9 @@
-use std::{fs, rc::Rc, borrow::BorrowMut};
+use std::{fs, rc::Rc, borrow::BorrowMut, rc::Weak};
 
 // Using box here instead of a weak reference is really bad, but too much hassle to deal with otherwise.
 struct Tree{
     node: Node,
-    parent: Option<Box<Tree>>,
+    parent: Option<Weak<Tree>>,
 }
 
 enum Node{
@@ -14,8 +14,8 @@ enum Node{
 }
 
 impl Tree{
-    fn from_string(s: String) -> Self{
-        let mut root = 
+    fn from_string(s: String) -> Rc<Self>{
+        let mut root = Rc::new(
             Tree {  
                 node: Node::Folder{
                     name: "/".to_string(), 
@@ -23,21 +23,21 @@ impl Tree{
                     children: vec!()
                 }, 
                 parent: None, 
-            };
-        let mut current = &mut root;
+            });
+        let mut current = root.clone();
         for l in s.lines(){
             let line = Line::from_string(l);
             match line{
                 Line::Node(n) => {
                     if let Node::Folder {children: c, ..} = current.node.borrow_mut(){
-                            c.push(Rc::new(Tree { node: n, parent: Some(Box::new(*current)) }))
+                            c.push(Rc::new(Tree { node: n, parent: Some(Rc::downgrade(&current)) }))
                         }
                 },
                 Line::Command(c) =>{
                     match c{
                         Command::To(to) => todo!(),
-                        Command::Root => current = &mut root,
-                        Command::Up => current = current.parent(),
+                        Command::Root => current = root.clone(),
+                        Command::Up => current = Tree::parent(&current),
                         _ => panic!()
                     }
                 }
@@ -46,8 +46,8 @@ impl Tree{
         root
     }
 
-    fn parent(&mut self) -> &mut Self{
-        self.parent.as_mut().unwrap()
+    fn parent(s: &Rc<Self>) -> Rc<Self>{
+        s.parent.unwrap().upgrade().unwrap()
     }
 }
 
