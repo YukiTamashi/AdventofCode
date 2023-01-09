@@ -11,12 +11,12 @@ enum Node{
     File{name: String, size: u32},
     Folder{name: String, 
            size: u32, 
-           children: Vec<Rc<Tree>>}
+           children: Vec<Rc<RefCell<Tree>>>}
 }
 
 impl Tree{
     fn from_string(s: String) -> Self{
-        let mut root = 
+        let root = 
             Tree {  
                 node: Node::Folder{
                     name: "/".to_string(), 
@@ -31,14 +31,19 @@ impl Tree{
             match line{
                 Line::Node(n) => {
                     if let Node::Folder {children: mut c, ..} = (current.borrow()).node.clone(){
-                        c.push(Rc::new(Tree { node: n, parent: Some(Rc::downgrade(&current)) }))
+                        c.push(Rc::new(RefCell::new(Tree { node: n, parent: Some(Rc::downgrade(&current)) })))
                         }
                 },
                 Line::Command(c) =>{
                     match c{
-                        Command::To(to) => todo!(),
+                        Command::To(to) => {if let Node::Folder {children: mut c, ..} = (current.borrow()).node.clone(){
+                                                    for children in c{
+
+                                                    }
+                                                        }
+                                                    },
                         Command::Root => current = Rc::new(RefCell::new(root.clone())),
-                        Command::Up => {let a = (current.borrow()).parent.as_ref().unwrap().clone().upgrade().unwrap();
+                        Command::Up => {let a = current.borrow().parent.as_ref().unwrap().clone().upgrade().unwrap();
                                         current = a;},
                         _ => panic!()
                     }
@@ -46,11 +51,7 @@ impl Tree{
             }
         }
         root
-    }
-
-    fn parent<'a>(&mut self) -> Rc<RefCell<Self>>{
-        self.parent.as_mut().unwrap().upgrade().unwrap()
-    }
+    } 
 }
 
 enum Line{
