@@ -1,11 +1,12 @@
-use std::{fs, rc::Rc, borrow::BorrowMut, rc::Weak};
+use std::{fs, rc::Rc, rc::Weak, cell::{RefCell, UnsafeCell}, borrow::BorrowMut};
 
-// Using box here instead of a weak reference is really bad, but too much hassle to deal with otherwise.
+#[derive(Clone)]
 struct Tree{
     node: Node,
-    parent: Option<Weak<Tree>>,
+    parent: Option<Weak<RefCell<Tree>>>,
 }
 
+#[derive(Clone)]
 enum Node{
     File{name: String, size: u32},
     Folder{name: String, 
@@ -14,8 +15,8 @@ enum Node{
 }
 
 impl Tree{
-    fn from_string(s: String) -> Rc<Self>{
-        let mut root = Rc::new(
+    fn from_string(s: String) -> Self{
+        let mut root = 
             Tree {  
                 node: Node::Folder{
                     name: "/".to_string(), 
@@ -23,21 +24,21 @@ impl Tree{
                     children: vec!()
                 }, 
                 parent: None, 
-            });
-        let mut current = root.clone();
+            };
+        let mut current = &mut root;
         for l in s.lines(){
             let line = Line::from_string(l);
             match line{
                 Line::Node(n) => {
-                    if let Node::Folder {children: c, ..} = current.node.borrow_mut(){
-                            c.push(Rc::new(Tree { node: n, parent: Some(Rc::downgrade(&current)) }))
+                    if let Node::Folder {children: mut c, ..} = current.node.borrow_mut(){
+                        c.push(Rc::new(Tree { node: n, parent: Some(Rc::downgrade(&Rc::new(RefCell::new(*current)))) }))
                         }
                 },
                 Line::Command(c) =>{
                     match c{
                         Command::To(to) => todo!(),
-                        Command::Root => current = root.clone(),
-                        Command::Up => current = Tree::parent(&current),
+                        Command::Root => {current = &mut root;},
+                        Command::Up => current = current.parent(),
                         _ => panic!()
                     }
                 }
@@ -46,8 +47,8 @@ impl Tree{
         root
     }
 
-    fn parent(s: &Rc<Self>) -> Rc<Self>{
-        s.parent.unwrap().upgrade().unwrap()
+    fn parent<'a>(&mut self) -> &'a mut Self{
+        self.parent.as_mut().unwrap().upgrade().unwrap().get_mut()
     }
 }
 
