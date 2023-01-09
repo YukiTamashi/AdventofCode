@@ -110,15 +110,37 @@ impl Tree {
                 0
             },
             Node::Folder {size, children, ..} => {
-                let csize = children.iter().map(|x| x.borrow().lower_than(val)).sum();
+                let total = children.iter().map(|x| x.borrow().lower_than(val)).sum();
                 // if folder size matches, add it to total
                 if size <= &val{
-                    csize + size
+                    total + size
                 }
                 // else, return just the total
                 else{
-                    csize
+                    total
                 }
+            },  
+        }
+    }
+
+    fn big_enough(&self, val: i64) -> i64{
+        match &self.node{
+            // ignore files, since already calculated with set_size
+            Node::File {..} => {
+                0
+            },
+            Node::Folder {size, children, ..} => {
+                let valid = children.iter().map(|x| x.borrow().big_enough(val)).filter(|x| *x != 0).collect::<Vec<i64>>();
+                let mut smallest = 0;
+                if size >= &val{
+                    smallest = *size;
+                }
+                for value in valid{
+                    if value < smallest{
+                        smallest = value;
+                    }
+                }
+                smallest
             },  
         }
     }
@@ -169,8 +191,14 @@ fn main() {
     let input = fs::read_to_string("day7.in").unwrap();
     let mut tree = Tree::from_string(input);
     tree.borrow_mut().set_size();
-    println!("{tree:?}");
     let max = 100000;
     let size = tree.borrow().lower_than(max);
-    println!("{size}");
+    println!("Total: {size}");
+    let total = if let Node::Folder {size, ..} = tree.borrow().node{size} else{0};
+    let max = 70000000;
+    let needed = 30000000;
+    let available = max - total;
+    let space_needed = needed - available;
+    let smallest = tree.borrow().big_enough(space_needed);
+    println!("space needed: {space_needed}, smallest: {smallest}");
 }
