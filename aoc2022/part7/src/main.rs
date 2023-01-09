@@ -25,20 +25,21 @@ impl Tree{
                 }, 
                 parent: None, 
             };
-        let mut current = &mut root;
+        let mut current = Rc::new(RefCell::new(root.clone()));
         for l in s.lines(){
             let line = Line::from_string(l);
             match line{
                 Line::Node(n) => {
-                    if let Node::Folder {children: mut c, ..} = current.node.borrow_mut(){
-                        c.push(Rc::new(Tree { node: n, parent: Some(Rc::downgrade(&Rc::new(RefCell::new(*current)))) }))
+                    if let Node::Folder {children: mut c, ..} = (current.borrow()).node.clone(){
+                        c.push(Rc::new(Tree { node: n, parent: Some(Rc::downgrade(&current)) }))
                         }
                 },
                 Line::Command(c) =>{
                     match c{
                         Command::To(to) => todo!(),
-                        Command::Root => {current = &mut root;},
-                        Command::Up => current = current.parent(),
+                        Command::Root => current = Rc::new(RefCell::new(root.clone())),
+                        Command::Up => {let a = (current.borrow()).parent.as_ref().unwrap().clone().upgrade().unwrap();
+                                        current = a;},
                         _ => panic!()
                     }
                 }
@@ -47,8 +48,8 @@ impl Tree{
         root
     }
 
-    fn parent<'a>(&mut self) -> &'a mut Self{
-        self.parent.as_mut().unwrap().upgrade().unwrap().get_mut()
+    fn parent<'a>(&mut self) -> Rc<RefCell<Self>>{
+        self.parent.as_mut().unwrap().upgrade().unwrap()
     }
 }
 
